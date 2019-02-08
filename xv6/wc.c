@@ -7,6 +7,9 @@ char buf[512];
 void
 wc(int fd, char *name)
 {
+
+  write(1, "FD: %d \n", fd);
+
   int i, n;
   int l, w, c, inword;
 
