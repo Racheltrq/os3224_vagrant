@@ -4,8 +4,8 @@
 
 char buf[64];
 
-char lastNew[64];
-char cLine[64];
+char lastNew[1024];
+char cLine[1024];
 
 void unicat(int fd)
 {
