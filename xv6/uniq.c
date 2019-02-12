@@ -2,7 +2,7 @@
 #include "user.h"
 #include "stat.h"
 
-char buf[64];
+char buf[512];
 
 char lastNew[1024];
 char cLine[1024];
@@ -16,15 +16,12 @@ void unicat(int fd)
 	int firstLine = 1;
 
 	while ((n = read(fd, buf, 1)) > 0) {
-		//printf(1, "isNew: %d", isNew);
 		if ((strcmp(buf, "\n")) == 0) {
-			//printf(1, "firstLine = %d\n", firstLine);
-			//Line End. Write if not new.
-			//cLine[curLineOffset] = '\n';
 			if (isNew) {
-//				write(1, cLine, sizeof(cLine));
-				if(firstLine == 0)
+				if (firstLine == 0) {
+					lastNew[curLineOffset] = '\0';
 					printf(1, "%s", lastNew);
+				}
 				strcpy(lastNew, cLine);
 				strcpy(cLine, "");
 			}
@@ -32,17 +29,20 @@ void unicat(int fd)
 			isNew = 0;
 			firstLine = 0;
 		}
+		
+		if ((strcmp(buf, "\r")) == 0) {
+			cLine[curLineOffset] = '\n';
+		} else {
+			cLine[curLineOffset] = buf[0];
+		}
 
-		cLine[curLineOffset] = buf[0];
 		if (cLine[curLineOffset] != lastNew[curLineOffset]) {
 			isNew = 1;
-		}else if (firstLine == 1){
+		}
+		else if (firstLine == 1) {
 			isNew = 1;
 		}
 		curLineOffset += 1;
-
-		//printf(1, "Cur Line Offset: %d\n", curLineOffset);
-		//printf(1, "cLine: %s\n", cLine);
 	}
 		
 
@@ -53,10 +53,56 @@ void unicat(int fd)
 	printf(1, "%s\n", cLine);
 }
 
-int main(int argc, char * argv[]) {
-	printf(1, "argc: %d\n", argc);
-	printf(1, "argv: %s\n", argv[1]);
+void ccat(int fd)
+{
+	int n;
+	int curLineOffset = 0;
 
+	int isNew = 1;
+	int firstLine = 1;
+	int count = 0;
+
+	while ((n = read(fd, buf, 1)) > 0) {
+		if ((strcmp(buf, "\n")) == 0) {
+			cLine[curLineOffset] = '\n';
+			if (isNew) {
+				if (firstLine == 0) {
+					printf(1, "%d %s", count, lastNew);
+				}
+				strcpy(lastNew, cLine);
+				strcpy(cLine, "");
+				count = 0;
+			}
+			count += 1;
+			curLineOffset = 0;
+			isNew = 0;
+			firstLine = 0;
+			n = read(fd, buf, 1);
+		}
+
+		cLine[curLineOffset] = buf[0];
+		if (cLine[curLineOffset] != lastNew[curLineOffset]) {
+			isNew = 1;
+		}
+		else if (firstLine == 1) {
+			isNew = 1;
+		}
+		curLineOffset += 1;
+	}
+
+
+	if (n < 0) {
+		printf(1, "unicat: read error \n");
+		exit();
+	}
+
+//	cLine[curLineOffset] = '\n';
+	if (isNew) {
+		printf(1, "%d %s", count, lastNew);
+	}
+}
+
+int main(int argc, char * argv[]) {
 
 	int fd, i;
 	if (argc <= 1) {
@@ -64,29 +110,31 @@ int main(int argc, char * argv[]) {
 		exit();
 	}
 
-	
-	for (i = 1; i < argc; i++) {
-		if ((fd = open(argv[i], 0)) < 0) {
-			printf(1, "%d\n", fd);
-			printf(1, "cat: cannot open %s\n", argv[i]);
-			exit();
+	if (argc == 2) {
+		for (i = 1; i < argc; i++) {
+			if ((fd = open(argv[i], 0)) < 0) {
+				printf(1, "cat: cannot open %s\n", argv[i]);
+				exit();
+			}
+			unicat(fd);
+			close(fd);
 		}
-		unicat(fd);
-		close(fd);
+		exit();
 	}
+	else if (argc == 3) {
+		if (strcmp(argv[1], "-c") == 0) {
+			if ((fd = open(argv[2], 0)) < 0) {
+				printf(1, "cat: cannot open %s\n", argv[2]);
+				exit();
+			}
+			ccat(fd);
+			close(fd);
+		}
+	}
+
 	exit();
+//Part2 ends here
 
-	if (strcmp(argv[0], "-c")) {
-		printf(1, "-c\n");
-		exit();
-	}
-	else if (strcmp(argv[0], "-d")) {
-		printf(1, "-d\n");
-		exit();
-	}
-	else if (strcmp(argv[0], "-d")) {
 
-		exit();
-	}
-	return 0;
+
 }
